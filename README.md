@@ -1,4 +1,4 @@
-# Shell Reversa em C
+# Reverse Shell em C
 
 Este repositório contém um exemplo educativo de uma shell reversa implementada em C, utilizando a biblioteca Winsock no Windows. O objetivo é demonstrar conceitos de comunicação de rede e execução remota de comandos, úteis para profissionais de segurança da informação.
 
