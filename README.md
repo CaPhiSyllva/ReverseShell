@@ -1,89 +1,194 @@
-# Reverse Shell em C
+# Projeto Reverse Shell - Documentação Técnica
 
-Este repositório contém um exemplo educativo de uma shell reversa implementada em C, utilizando a biblioteca Winsock no Windows. O objetivo é demonstrar conceitos de comunicação de rede e execução remota de comandos, úteis para profissionais de segurança da informação.
+## Visão Geral
+Este projeto implementa um cliente de reverse shell modular para sistemas Windows usando princípios modernos de design em C++. A aplicação estabelece uma conexão com um servidor de comando e controle (C2), executa comandos recebidos e retorna a saída. Projetado para fins educacionais, esta implementação demonstra práticas seguras de codificação, gerenciamento de recursos e técnicas de segurança ofensiva.
 
-## Índice
+**Aviso**: Esta ferramenta destina-se apenas a fins educacionais e testes de penetração autorizados. O uso não autorizado é ilegal.
 
-- [Descrição do Projeto](#descrição-do-projeto)
-- [Funcionalidades](#funcionalidades)
-- [Arquitetura do Código](#arquitetura-do-código)
-- [Requisitos](#requisitos)
-- [Como Compilar e Executar](#como-compilar-e-executar)
-- [Considerações de Segurança](#considerações-de-segurança)
-- [Contribuições](#contribuições)
-- [Licença](#licença)
+## Características Principais
+- **Arquitetura modular** com separação de responsabilidades
+- **Gerenciamento de recursos baseado em RAII** para sockets e handles
+- **Tratamento seguro de exceções** com relatórios de erro detalhados
+- **Capacidade de injeção de processos** para injeção de DLL
+- **Ocultação de console** para operação discreta
+- **Comunicação baseada em TCP** com execução de comandos
+- **Propagação de erros entre componentes** via exceções personalizadas
 
-## Descrição do Projeto
+## Arquitetura Técnica
 
-Este código implementa uma shell reversa que conecta a um servidor remoto, permitindo a execução de comandos no sistema alvo e o envio da saída de volta para o servidor. Este projeto é uma ferramenta de aprendizado sobre como ataques de shell reversa funcionam e as implicações de segurança associadas.
+### Diagrama de Componentes
+```
++----------------+       +-----------------+       +---------------+
+|   main.cpp     |------>|  ReverseShell   |<------| CommandExecutor
++----------------+       +-----------------+       +---------------+
+        |                   |           |
+        |                   |           |
+        v                   v           v
++----------------+   +-----------------+   +---------------+
+| SystemUtils    |   |  SocketHandler  |   | ProcessInjector
++----------------+   +-----------------+   +---------------+
+        |                   |
+        |                   |
+        v                   v
++----------------+   +-----------------+
+| WinAPIException|   | WinSockManager  |
++----------------+   +-----------------+
+```
 
-## Funcionalidades
+### Componentes Principais
+1. **WinAPIException** - Classe de exceção personalizada para erros da API Windows
+2. **WinSockManager** - Wrapper RAII para inicialização/limpeza do Winsock
+3. **SocketHandler** - Gerenciamento seguro de sockets com semântica de movimento
+4. **CommandExecutor** - Interface segura para execução de comandos
+5. **ProcessInjector** - Injeção de DLL com gerenciamento de recursos com escopo
+6. **ReverseShell** - Lógica central da reverse shell
+7. **SystemUtils** - Utilitários de manipulação do sistema
 
-- **Conexão TCP**: Estabelece uma conexão TCP com um servidor remoto definido pelo IP e porta.
-- **Execução de Comandos**: Recebe comandos do servidor, executa-os no sistema local e captura a saída.
-- **Comunicação**: Envia a saída dos comandos de volta ao servidor.
-- **Console Oculto**: A janela do console é oculta para evitar a detecção visual da execução.
+## Dependências
+- Windows SDK (versão 10.0+)
+- Winsock 2.2 (ws2_32.lib)
+- Compilador compatível com C++17
+- Bibliotecas da API Windows
 
-## Arquitetura do Código
+## Instruções de Compilação
 
-O código é estruturado em duas funções principais:
+### Requisitos do Compilador
+- MinGW-w64 (g++ 9.0+)
+- MSVC (Visual Studio 2019+)
 
-1. **`execute_command(char* output_buffer, int buffer_size, const char *command)`**:
-   - Executa um comando no sistema e armazena a saída em um buffer.
+### Compilação com MinGW
+```bash
+g++ -o reverse_shell.exe main.cpp WinAPIException.cpp WinSockManager.cpp \
+    SocketHandler.cpp CommandExecutor.cpp ProcessInjector.cpp \
+    ReverseShell.cpp SystemUtils.cpp -lws2_32 -static -O2 -s
+```
 
-2. **`start_reverse_shell()`**:
-   - Inicializa a comunicação de rede, aguarda comandos do servidor e utiliza `execute_command` para processá-los.
+### Compilação com MSVC
+```cmd
+cl /EHsc /O2 /std:c++17 /Fe:reverse_shell.exe main.cpp WinAPIException.cpp \
+   WinSockManager.cpp SocketHandler.cpp CommandExecutor.cpp \
+   ProcessInjector.cpp ReverseShell.cpp SystemUtils.cpp ws2_32.lib
+```
 
-### Fluxo do Programa
+## Configuração
+Modifique `ReverseShell.h` para configurar os parâmetros de conexão:
+```cpp
+static constexpr int DEFAULT_PORT = 4444;       // Porta do servidor
+const char* DEFAULT_IP = "192.168.1.100";       // IP do servidor
+static constexpr int DEFAULT_BUFLEN = 4096;     // Tamanho do buffer
+```
 
-1. O console é alocado e ocultado.
-2. A conexão com o servidor é estabelecida.
-3. Um loop aguarda comandos do servidor.
-4. Os comandos são executados e as saídas são enviadas de volta.
-
-## Requisitos
-
-- Compilador C/C++ compatível com Windows (ex: GCC, Visual Studio).
-- Biblioteca Winsock (normalmente incluída no ambiente de desenvolvimento do Windows).
-
-## Como Compilar e Executar
-
-### Compilação
-
-1. **Abra o terminal ou prompt de comando.**
-2. **Navegue até o diretório onde o código está salvo.**
-3. **Compile o código usando um compilador C:**
+## Utilização
+1. Inicie um listener na máquina do atacante:
    ```bash
-   gcc -o reverse_shell reverse_shell.c -lws2_32
+   nc -lvp 4444
+   ```
+2. Execute o binário compilado no sistema alvo
+3. Envie comandos através do listener:
+   ```
+   > whoami /all
+   > systeminfo
+   > net user
    ```
 
-### Execução
-
-- Execute o programa compilado:
-  ```bash
-  ./reverse_shell
-  ```
-
-**Nota**: O endereço IP e a porta do servidor devem ser configurados no código antes da execução.
+## Estrutura de Arquivos
+```
+reverse-shell/
+├── include/               # Cabeçalhos públicos
+│   ├── CommandExecutor.h
+│   ├── ProcessInjector.h
+│   ├── ReverseShell.h
+│   ├── SocketHandler.h
+│   ├── SystemUtils.h
+│   ├── WinAPIException.h
+│   └── WinSockManager.h
+├── src/                   # Arquivos de implementação
+│   ├── CommandExecutor.cpp
+│   ├── ProcessInjector.cpp
+│   ├── ReverseShell.cpp
+│   ├── SocketHandler.cpp
+│   ├── SystemUtils.cpp
+│   ├── WinAPIException.cpp
+│   └── WinSockManager.cpp
+├── main.cpp               # Ponto de entrada
+└── CMakeLists.txt         # Configuração de build (opcional)
+```
 
 ## Considerações de Segurança
 
-Este projeto é destinado a fins educacionais. O uso de shells reversas em ambientes não autorizados é ilegal e antiético. Sempre obtenha permissão explícita antes de realizar testes de segurança em qualquer sistema.
+### Medidas Protetivas
+1. **Validação de Entrada**: Toda entrada de rede é limitada por buffer
+2. **Encapsulamento de Recursos**: Padrão RAII previne vazamentos
+3. **Isolamento de Erros**: Tratamento de erros específico por componente
+4. **Segurança de Memória**: Buffers baseados em vetor previnem overflows
 
-### Práticas Recomendadas
+### Diretrizes Éticas
+1. **Autorização Explícita**: Obtenha permissão por escrito antes de testar
+2. **Ambientes Controlados**: Use redes isoladas e máquinas virtuais
+3. **Manuseio de Dados**: Evite informações sensíveis durante os testes
+4. **Divulgação Responsável**: Reporte vulnerabilidades descobertas de forma responsável
 
-- Utilize ambientes de teste isolados.
-- Estude e implemente técnicas de defesa contra shells reversas.
-- Mantenha-se atualizado sobre as melhores práticas em segurança cibernética.
+### Evasão de Detecção (Para Pesquisa)
+1. **Evasão de Análise Estática**:
+   - Ofuscação de strings
+   - Aplanamento de fluxo de controle
+2. **Evasão Comportamental**:
+   - Indireção de chamadas de API
+   - Técnicas de ofuscação de sleep
+3. **Evasão de Rede**:
+   - Criptografia SSL/TLS
+   - Mimetismo de protocolo
 
-## Contribuições
+## Anti-Padrões a Evitar
+```cpp
+// INSEGURO: Ponteiros crus sem RAII
+SOCKET s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+// ... código ...
+closesocket(s); // Possível vazamento se ocorrer exceção
 
-Contribuições são bem-vindas! Sinta-se à vontade para abrir issues ou pull requests.
+// SEGURO: Uso de wrapper RAII
+SocketHandler safe_socket(::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP));
+```
+
+## Extensão de Funcionalidades
+### Adicionando Recursos
+1. **Módulo de Persistência**:
+   ```cpp
+   class PersistenceManager {
+   public:
+       static void install();
+       static void uninstall();
+   };
+   ```
+2. **Transferência de Arquivos**:
+   ```cpp
+   class FileTransfer {
+   public:
+       static void upload(SocketHandler& socket, const std::string& path);
+       static void download(SocketHandler& socket, const std::string& path);
+   };
+   ```
+3. **Comunicação Criptografada**:
+   ```cpp
+   class SecureChannel {
+   public:
+       void encrypt(BYTE* data, size_t size);
+       void decrypt(BYTE* data, size_t size);
+   };
+   ```
 
 ## Licença
+Este projeto educacional é licenciado sob a **Academic Free License v3.0**:
+- Permite uso educacional e de pesquisa
+- Proíbe uso comercial e malicioso
+- Exige atribuição
+- Não inclui garantias
 
-Este projeto é licenciado sob a [MIT License](LICENSE). Use-o como desejar, mas sempre com responsabilidade.
+## Contribuição
+1. Reporte problemas no rastreador de issues
+2. Envie PRs para o branch de desenvolvimento
+3. Siga as diretrizes de codificação segura
+4. Inclua testes abrangentes
+5. Documente todas as novas funcionalidades
 
----
-
-**Atenção**: Este código não deve ser usado para fins maliciosos. O conhecimento adquirido deve ser aplicado de maneira ética e responsável.
+> **Aviso Legal**: Este projeto demonstra conceitos de segurança para fins defensivos. Os autores não se responsabilizam por uso não autorizado ou malicioso. Sempre cumpra as leis locais e obtenha autorização adequada antes de usar qualquer ferramenta de segurança.
