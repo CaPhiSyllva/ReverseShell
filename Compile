@@ -1,0 +1,1 @@
+g++ -o malware.exe main.cpp WinAPIException.cpp WinSockManager.cpp SocketHandler.cpp CommandExecutor.cpp ProcessInjector.cpp ReverseShell.cpp SystemUtils.cpp -lws2_32
